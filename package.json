@@ -1,0 +1,17 @@
+{
+  "name": "moneynote",
+  "version": "1.0.0",
+  "private": true,
+  "description": "小账本 MoneyNote，无需构建的中文本地记账网页",
+  "scripts": {
+    "test": "node --test tests/core.test.cjs",
+    "test:browser": "node --test tests/browser.test.cjs",
+    "check": "node --check js/core.js && node --check js/app.js"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

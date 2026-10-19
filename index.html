@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#3679f5" />
+    <meta
+      name="description"
+      content="小账本 MoneyNote：简洁、私密的个人记账工具。账目仅保存在你的浏览器，无需登录。"
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"
+    />
+    <title>小账本 MoneyNote · 把生活记清楚</title>
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./css/style.css" />
+    <script src="./js/core.js" defer></script>
+    <script src="./js/app.js" defer></script>
+  </head>
+  <body>
+    <noscript
+      ><div class="noscript">
+        请启用 JavaScript 后使用小账本。所有账目只在你的浏览器中处理。
+      </div></noscript
+    >
+    <aside class="sidebar" aria-label="应用导航">
+      <a class="brand" href="./index.html" aria-label="小账本 MoneyNote 首页"
+        ><span class="brand-icon" aria-hidden="true">▤</span
+        ><span>小账本<small>MoneyNote</small></span></a
+      >
+      <div class="sidebar-label">我的空间</div>
+      <a class="nav-item active" href="#overview" aria-current="page"
+        ><span aria-hidden="true">▦</span> 账本概览</a
+      >
+      <a class="nav-item" href="#transactions"
+        ><span aria-hidden="true">≡</span> 收支明细</a
+      >
+      <button class="nav-item" id="backup-help" type="button">
+        <span aria-hidden="true">⇅</span> 数据与备份
+      </button>
+      <div class="sidebar-footer">
+        <span class="privacy-dot"></span> 只属于你的账本
+        <p>数据保存在本机浏览器<br />无需登录，安心记录</p>
+        <span class="version">MONEYNOTE · V1.0</span>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <span class="topbar-title">个人财务空间</span
+        ><span class="mobile-brand">▤ 小账本 <small>MoneyNote</small></span
+        ><span class="local-badge"
+          ><span class="privacy-dot"></span> 本地存储 · 无云同步</span
+        >
+      </header>
+      <main id="overview">
+        <section class="page-heading">
+          <div>
+            <p class="eyebrow">A LITTLE NOTE, A CLEARER LIFE</p>
+            <h1>把生活，记清楚<span class="heading-dot">。</span></h1>
+            <p class="subtitle">每一笔小记录，都是认真生活的印记。</p>
+          </div>
+          <button class="button primary desktop-add" id="add-top" type="button">
+            <span aria-hidden="true">＋</span> 记一笔
+          </button>
+        </section>
+
+        <div class="storage-warning" id="storage-warning" role="alert" hidden>
+          <strong>账本暂时无法读取</strong>
+          <p id="storage-message"></p>
+          <div class="button-row">
+            <button class="button small" id="download-original" type="button">
+              下载原始数据</button
+            ><button class="button small" id="reload-data" type="button">
+              重新读取
+            </button>
+          </div>
+        </div>
+
+        <section class="month-bar" aria-label="月份选择">
+          <div class="month-controls">
+            <button
+              id="prev-month"
+              class="icon-button"
+              aria-label="上个月"
+              type="button"
+            >
+              ‹</button
+            ><label class="sr-only" for="month">选择年月</label
+            ><input
+              id="month"
+              type="month"
+              min="1900-01"
+              max="9999-12"
+              required
+            /><button
+              id="next-month"
+              class="icon-button"
+              aria-label="下个月"
+              type="button"
+            >
+              ›</button
+            ><button id="this-month" class="text-button" type="button">
+              回到本月
+            </button>
+          </div>
+          <span class="month-caption" id="month-caption"></span>
+        </section>
+
+        <section class="summary-grid" aria-label="所选月份收支统计">
+          <article class="summary-card">
+            <div class="summary-label">
+              <span>本月收入</span
+              ><span class="stat-icon income-icon" aria-hidden="true">↙</span>
+            </div>
+            <strong id="income-total">¥0.00</strong>
+            <p>每一份努力，都有回响</p>
+            <span class="card-accent income-accent"></span>
+          </article>
+          <article class="summary-card">
+            <div class="summary-label">
+              <span>本月支出</span
+              ><span class="stat-icon expense-icon" aria-hidden="true">↗</span>
+            </div>
+            <strong id="expense-total">¥0.00</strong>
+            <p>让每一笔花费，心中有数</p>
+            <span class="card-accent expense-accent"></span>
+          </article>
+          <article class="summary-card balance-card">
+            <div class="summary-label">
+              <span>本月结余</span
+              ><span class="stat-icon balance-icon" aria-hidden="true">≈</span>
+            </div>
+            <strong id="balance-total">¥0.00</strong>
+            <p>收入 − 支出 · 为未来留一点余地</p>
+            <span class="balance-decoration" aria-hidden="true"></span>
+          </article>
+        </section>
+
+        <div class="content-grid">
+          <section
+            class="panel analysis-panel"
+            aria-labelledby="analysis-title"
+          >
+            <div class="panel-heading">
+              <h2 id="analysis-title">钱花在哪儿</h2>
+              <span class="subtle">本月支出分析</span>
+            </div>
+            <div class="chart-area">
+              <div
+                class="donut empty-donut"
+                id="expense-chart"
+                role="img"
+                aria-label="本月暂无支出"
+              >
+                <div class="donut-center">
+                  <span>总支出</span><strong id="chart-total">¥0.00</strong>
+                </div>
+              </div>
+            </div>
+            <p id="chart-empty" class="chart-empty">
+              还没有支出记录<br /><span>记下第一笔，慢慢看见生活的轮廓</span>
+            </p>
+            <ul
+              class="category-legend"
+              id="category-legend"
+              aria-label="各类别支出金额和占比"
+            ></ul>
+            <div class="analysis-footnote">统计包含所选月份的全部账目</div>
+          </section>
+
+          <section
+            class="panel transactions-panel"
+            id="transactions"
+            aria-labelledby="transactions-title"
+          >
+            <div class="panel-heading">
+              <div class="title-with-count">
+                <h2 id="transactions-title">收支明细</h2>
+                <span class="count-badge" id="transaction-count">0 笔</span>
+              </div>
+              <button id="add-list" class="text-button" type="button">
+                ＋ 新增账目
+              </button>
+            </div>
+            <div class="filters">
+              <label class="search-box"
+                ><span aria-hidden="true">⌕</span
+                ><span class="sr-only">搜索备注、分类、日期或金额</span
+                ><input
+                  id="search"
+                  type="search"
+                  placeholder="搜索备注、分类或金额"
+                  maxlength="200" /></label
+              ><label
+                ><span class="sr-only">筛选分类</span
+                ><select id="category-filter">
+                  <option value="">全部分类</option>
+                </select></label
+              ><button
+                id="clear-filters"
+                class="text-button"
+                type="button"
+                hidden
+              >
+                清除筛选
+              </button>
+            </div>
+            <p class="filter-note" id="filter-note">按日期从近到远排列</p>
+            <div class="transaction-list" id="transaction-list"></div>
+            <div class="empty-state" id="list-empty">
+              <div class="empty-art" aria-hidden="true">▤<span>＋</span></div>
+              <h3 id="empty-title">新的账本，新的开始</h3>
+              <p id="empty-description">
+                从一杯咖啡、一份工资开始，记下你的第一笔。
+              </p>
+              <button class="button primary" id="add-empty" type="button">
+                ＋ 记下第一笔
+              </button>
+            </div>
+            <div class="pagination" id="pagination" hidden>
+              <button class="button small" id="prev-page" type="button">
+                上一页</button
+              ><span id="page-label"></span
+              ><button class="button small" id="next-page" type="button">
+                下一页
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <section
+          class="backup-panel"
+          id="data-tools"
+          aria-labelledby="backup-title"
+        >
+          <div class="backup-description">
+            <span class="backup-icon" aria-hidden="true">⇩</span>
+            <div>
+              <h2 id="backup-title">给记录留一份备份</h2>
+              <p>账目仅保存在当前浏览器，建议定期导出 JSON 备份。</p>
+            </div>
+          </div>
+          <div class="backup-actions">
+            <button id="export-json" class="button small" type="button">
+              导出 JSON</button
+            ><button id="import-json" class="button small" type="button">
+              导入恢复</button
+            ><button id="export-csv" class="button small" type="button">
+              导出 CSV
+            </button>
+          </div>
+          <input
+            id="import-file"
+            type="file"
+            accept=".json,application/json"
+            hidden
+          />
+          <p class="backup-note">
+            导出包含全部月份；导入完整校验并经确认后替换现有账目。CSV
+            用于查看，恢复请用 JSON。
+          </p>
+        </section>
+        <footer class="page-footer">
+          <span>小账本 MoneyNote</span><span>好好生活，慢慢积累。</span>
+        </footer>
+      </main>
+    </div>
+    <div class="mobile-action-bar">
+      <span>生活有数，心里有底</span
+      ><button class="button primary" id="add-mobile" type="button">
+        ＋ 记一笔
+      </button>
+    </div>
+
+    <dialog id="entry-dialog" aria-labelledby="entry-title">
+      <form id="entry-form" novalidate>
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">A NOTE FOR TODAY</p>
+            <h2 id="entry-title">记一笔</h2>
+          </div>
+          <button
+            id="close-dialog"
+            class="icon-button"
+            type="button"
+            aria-label="关闭记账窗口"
+          >
+            ×
+          </button>
+        </div>
+        <fieldset class="type-switch">
+          <legend class="sr-only">收支类型</legend>
+          <label
+            ><input type="radio" name="type" value="expense" checked /><span
+              >↗ 支出</span
+            ></label
+          ><label
+            ><input type="radio" name="type" value="income" /><span
+              >↙ 收入</span
+            ></label
+          >
+        </fieldset>
+        <label class="amount-label" for="amount">金额（元）</label>
+        <div class="amount-input">
+          <span>¥</span
+          ><input
+            id="amount"
+            name="amount"
+            inputmode="decimal"
+            type="text"
+            autocomplete="off"
+            placeholder="0.00"
+            maxlength="12"
+            required
+            aria-describedby="amount-help"
+          />
+        </div>
+        <p id="amount-help" class="field-help">大于 0，最多两位小数</p>
+        <div class="form-row">
+          <label
+            >日期<input
+              id="date"
+              name="date"
+              type="date"
+              min="1900-01-01"
+              max="9999-12-31"
+              required /></label
+          ><label
+            >分类<select id="category" name="category" required></select
+          ></label>
+        </div>
+        <label class="note-label" for="note"
+          >备注 <span>选填 · 最多 200 字</span></label
+        ><textarea
+          id="note"
+          name="note"
+          rows="3"
+          maxlength="200"
+          placeholder="这一笔，记录了什么？"
+        ></textarea>
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+        <div class="dialog-actions">
+          <button id="cancel-entry" class="button" type="button">取消</button
+          ><button id="save-entry" class="button primary" type="submit">
+            保存账目
+          </button>
+        </div>
+        <p class="dialog-footnote">仅保存在此浏览器，不会上传账目</p>
+      </form>
+    </dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>
