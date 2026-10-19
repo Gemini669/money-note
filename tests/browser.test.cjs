@@ -485,10 +485,21 @@ const annualEntries = [
   }),
   entry({ id: "previous", date: "2025-12-31", amountCents: 9900 }),
 ];
+async function waitForView(page, annual) {
+  // 同页锚点的 hashchange 异步触发；click() 返回不代表 showView() 已执行。
+  // isVisible() 本身不重试，因此先等待目标可见、另一视图隐藏，再保留各项断言。
+  await page.locator(annual ? "#annual-report" : "#monthly-view").waitFor({
+    state: "visible",
+  });
+  await page.locator(annual ? "#monthly-view" : "#annual-report").waitFor({
+    state: "hidden",
+  });
+}
 async function visitAnnual(page, year = 2026) {
   await page.evaluate(() => {
     location.hash = "#annual-report";
   });
+  await waitForView(page, true);
   await page.locator("#annual-title").waitFor({ state: "visible" });
   await page.locator("#annual-year").fill(String(year));
   await page.locator("#annual-year").dispatchEvent("change");
@@ -497,7 +508,7 @@ async function visitMonthly(page) {
   await page.evaluate(() => {
     location.hash = "#overview";
   });
-  await page.locator("#monthly-view").waitFor({ state: "visible" });
+  await waitForView(page, false);
 }
 
 test("年度桌面导航、默认年份与V1数据只读兼容，保留月度筛选状态", async () => {
@@ -508,6 +519,7 @@ test("年度桌面导航、默认年份与V1数据只读兼容，保留月度筛
   );
   await page.locator("#search").fill("午餐");
   await page.locator('.sidebar a[href="#annual-report"]').click();
+  await waitForView(page, true);
   assert.ok(await page.locator("#annual-report").isVisible());
   assert.ok(await page.locator("#monthly-view").isHidden());
   assert.equal(
@@ -518,6 +530,9 @@ test("年度桌面导航、默认年份与V1数据只读兼容，保留月度筛
   await page.locator("#annual-year").dispatchEvent("change");
   assert.equal(await amountText(page, "annual-expense"), "¥99.00");
   await page.locator('.sidebar a[href="#overview"]').click();
+  await waitForView(page, false);
+  assert.ok(await page.locator("#monthly-view").isVisible());
+  assert.ok(await page.locator("#annual-report").isHidden());
   assert.equal(await page.locator("#month").inputValue(), "2026-10");
   assert.equal(await page.locator("#search").inputValue(), "午餐");
   assert.equal(
@@ -842,6 +857,7 @@ test("年度320/390/768及1440像素布局、最大金额、手机导航和横�
     if (width < 700)
       await page.locator('.view-tabs a[href="#annual-report"]').click();
     else await page.locator('.sidebar a[href="#annual-report"]').click();
+    await waitForView(page, true);
     await page.locator("#annual-year").fill("2026");
     await page.locator("#annual-year").dispatchEvent("change");
     assert.equal(
@@ -869,9 +885,60 @@ test("年度320/390/768及1440像素布局、最大金额、手机导航和横�
       });
       assert.ok(await scroller.evaluate((node) => node.scrollLeft > 0));
       await page.locator("#mobile-report-link").click();
+      await waitForView(page, false);
       assert.ok(await page.locator("#monthly-view").isVisible());
+      assert.ok(await page.locator("#annual-report").isHidden());
     }
     await context.close();
+  }
+});
+
+test("桌面与手机导航往返及浏览器前进后退保持视图和导航状态一致", async () => {
+  for (const width of [1440, 390]) {
+    const { context, page } = await openPage({
+      viewport: { width, height: 900 },
+    });
+    try {
+      const annualLink =
+        width < 700
+          ? '.view-tabs a[href="#annual-report"]'
+          : '.sidebar a[href="#annual-report"]';
+      const overviewLink =
+        width < 700 ? "#mobile-report-link" : '.sidebar a[href="#overview"]';
+      for (let round = 0; round < 2; round++) {
+        await page.locator(annualLink).click();
+        await waitForView(page, true);
+        assert.equal(new URL(page.url()).hash, "#annual-report");
+        assert.equal(
+          await page.locator(annualLink).getAttribute("aria-current"),
+          "page",
+        );
+        assert.equal(
+          await page.locator("#mobile-report-link").getAttribute("href"),
+          "#overview",
+        );
+        await page.locator(overviewLink).click();
+        await waitForView(page, false);
+        assert.equal(new URL(page.url()).hash, "#overview");
+        await page.goBack();
+        await waitForView(page, true);
+        assert.equal(new URL(page.url()).hash, "#annual-report");
+        assert.equal(
+          await page.locator(annualLink).getAttribute("aria-current"),
+          "page",
+        );
+        await page.goForward();
+        await waitForView(page, false);
+        assert.equal(new URL(page.url()).hash, "#overview");
+        assert.equal(
+          await page.locator("#mobile-report-link").getAttribute("href"),
+          "#annual-report",
+        );
+      }
+      assert.equal(await page.evaluate(() => localStorage.length), 0);
+    } finally {
+      await context.close();
+    }
   }
 });
 
