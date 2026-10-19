@@ -1641,3 +1641,478 @@ dialog .toast {
     transition: none !important;
   }
 }
+
+/* V2.0 年度报告：复用现有卡片、人民币展示和蓝白色变量。 */
+.view-tabs {
+  display: none;
+}
+.report-badge {
+  padding: 6px 11px;
+  border: 1px solid #dbe7fc;
+  border-radius: 20px;
+  color: var(--blue);
+  background: #edf4ff;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.year-toolbar,
+.year-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.year-toolbar {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.year-controls label {
+  font-size: 12px;
+  color: #687a96;
+}
+.year-controls input {
+  border: 1px solid #dce5f4;
+  border-radius: 8px;
+  background: white;
+  padding: 7px 9px;
+  width: 88px;
+  min-height: 40px;
+  font-size: 16px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.year-controls > span {
+  color: #687a96;
+}
+.annual-empty {
+  padding: 13px 17px;
+  border: 1px dashed #c5d9fa;
+  border-radius: 10px;
+  margin-bottom: 18px;
+  background: #eef5ff;
+  color: #647eaa;
+  font-size: 12px;
+}
+.annual-summary {
+  margin-bottom: 16px;
+}
+.annual-summary .summary-card > p {
+  font-size: 11px;
+}
+.annual-averages {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.15fr;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 23px;
+  background: #edf3fc;
+  border: 1px solid #e1e9f7;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+.annual-averages > div {
+  min-width: 0;
+}
+.annual-averages > div > span {
+  display: block;
+  color: #6f829f;
+  font-size: 12px;
+}
+.annual-averages strong {
+  display: block;
+  font-size: 22px;
+  overflow-wrap: anywhere;
+  letter-spacing: -0.5px;
+  margin-top: 4px;
+}
+.annual-averages > p {
+  color: #8293ad;
+  font-size: 11px;
+  padding-left: 20px;
+  border-left: 1px solid #d7e2f3;
+}
+.annual-trend-panel {
+  margin-bottom: 20px;
+}
+.annual-panel-subtitle {
+  color: #8997ad;
+  font-size: 11px;
+  margin-top: 5px;
+}
+.annual-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #71839e;
+}
+.annual-chart-legend > span {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.annual-chart-legend i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+.flow-income {
+  background: var(--green);
+}
+.flow-expense {
+  background: var(--blue);
+}
+.flow-negative {
+  background: var(--red);
+}
+.annual-chart-hint {
+  color: #8696af;
+  font-size: 11px;
+  margin: 1px 23px 7px;
+}
+.annual-figure {
+  margin: 0;
+  min-width: 0;
+}
+.svg-scroll {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+.annual-svg {
+  display: block;
+  width: 100%;
+  min-width: 680px;
+  height: auto;
+}
+.chart-axis-label {
+  font-family: inherit;
+  font-size: 12px;
+  fill: #637690;
+  font-variant-numeric: tabular-nums;
+}
+.chart-grid-line {
+  stroke: #edf1f7;
+  stroke-width: 1;
+}
+.chart-zero-line {
+  stroke: #8398b7;
+  stroke-width: 1.8;
+}
+.chart-month {
+  cursor: pointer;
+}
+.chart-month:focus {
+  outline: none;
+}
+.chart-month:focus .chart-hit-area,
+.chart-month.selected .chart-hit-area {
+  fill: #3679f50b;
+  stroke: #b5cef9;
+  stroke-width: 1;
+}
+.chart-month:hover .chart-hit-area {
+  fill: #3679f50b;
+}
+.annual-readout {
+  padding: 12px 23px;
+  background: #f6f9fe;
+  border-top: 1px solid #e9eff8;
+  font-size: 12px;
+  color: #526e98;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.annual-extremes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 14px 23px;
+  color: #6b7d98;
+  font-size: 11px;
+}
+.annual-extremes p {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f8faff;
+  overflow-wrap: anywhere;
+}
+.annual-table-panel {
+  margin-bottom: 20px;
+}
+.annual-table-panel summary {
+  padding: 17px 23px;
+  color: #5677aa;
+  font-size: 12px;
+  cursor: pointer;
+}
+.annual-table-panel summary:hover {
+  background: #f6f9fe;
+}
+.annual-table-panel summary:focus-visible {
+  outline: 3px solid #81aaf7;
+  outline-offset: -4px;
+}
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+#annual-month-table {
+  width: 100%;
+  min-width: 660px;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+#annual-month-table caption {
+  text-align: left;
+  padding: 8px 23px 15px;
+  color: #8795ab;
+  font-size: 11px;
+}
+#annual-month-table th,
+#annual-month-table td {
+  padding: 12px 17px;
+  border-top: 1px solid var(--border);
+  text-align: right;
+}
+#annual-month-table th:first-child {
+  text-align: left;
+}
+#annual-month-table thead {
+  background: #f6f9fe;
+  color: #7184a2;
+}
+#annual-month-table tbody th {
+  color: #7184a2;
+  font-weight: 500;
+}
+#annual-month-table tfoot {
+  background: #f0f5fe;
+  font-weight: 650;
+}
+.annual-category-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+.annual-category-panel {
+  min-width: 0;
+}
+.annual-ranking {
+  list-style: none;
+  padding: 2px 23px 14px;
+  margin: 0;
+}
+.annual-ranking:empty {
+  display: none;
+}
+.annual-ranking li {
+  padding: 15px 0;
+  border-bottom: 1px solid #f0f3f8;
+}
+.annual-rank-heading,
+.annual-rank-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.annual-rank-heading {
+  font-size: 12px;
+}
+.annual-rank-name {
+  flex-shrink: 0;
+  color: #61738f;
+}
+.annual-rank-heading strong {
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+.annual-rank-info {
+  font-size: 10px;
+  color: #8a99af;
+  margin: 5px 0 9px;
+}
+.annual-rank-track {
+  height: 7px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #eff3f9;
+}
+.annual-rank-track > span {
+  height: 100%;
+  display: block;
+  border-radius: 4px;
+}
+.annual-category-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #8b9bb3;
+  font-size: 12px;
+}
+.annual-category-note {
+  padding: 13px 23px;
+  color: #96a2b5;
+  font-size: 10px;
+  background: #fcfdff;
+}
+.annual-data-note {
+  font-size: 11px;
+  color: #8b99ae;
+  margin-top: 18px;
+  line-height: 1.9;
+}
+.mobile-report-link {
+  font-size: 12px;
+  color: var(--blue);
+  padding: 10px 3px;
+}
+@media (max-width: 1000px) {
+  .annual-category-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .annual-averages {
+    grid-template-columns: 1fr 1fr;
+  }
+  .annual-averages > p {
+    grid-column: 1 / -1;
+    border-left: 0;
+    border-top: 1px solid #d7e2f3;
+    padding: 12px 0 0;
+  }
+  .annual-averages > p br {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .view-tabs {
+    display: flex;
+    padding: 4px;
+    border: 1px solid #dfe8f7;
+    border-radius: 11px;
+    background: #edf2fa;
+    margin: 0 0 25px;
+  }
+  .view-tabs a {
+    flex: 1;
+    text-align: center;
+    padding: 9px 6px;
+    border-radius: 8px;
+    color: #8493ab;
+    font-size: 12px;
+  }
+  .view-tabs a[aria-current="page"] {
+    background: white;
+    color: var(--blue);
+    font-weight: 600;
+    box-shadow: 0 2px 7px #23496a09;
+  }
+  .annual-heading {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .report-badge {
+    font-size: 10px;
+    padding: 4px 10px;
+  }
+  .year-toolbar {
+    gap: 9px;
+  }
+  .year-controls {
+    gap: 5px;
+  }
+  .year-controls label {
+    font-size: 11px;
+  }
+  .year-controls input {
+    width: 76px;
+    font-size: 15px;
+  }
+  .year-controls .icon-button {
+    width: 29px;
+  }
+  .year-controls .text-button {
+    font-size: 11px;
+  }
+  .annual-empty {
+    font-size: 11px;
+    padding: 12px;
+  }
+  .annual-summary .summary-card > p {
+    font-size: 9px;
+  }
+  .annual-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .annual-summary .balance-card {
+    grid-column: 1 / -1;
+  }
+  .annual-averages {
+    padding: 17px;
+    gap: 13px;
+    margin-bottom: 20px;
+  }
+  .annual-averages strong {
+    font-size: 19px;
+  }
+  .annual-averages > div > span {
+    font-size: 11px;
+  }
+  .annual-averages > p {
+    font-size: 10px;
+  }
+  .annual-trend-panel .panel-heading {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 11px;
+  }
+  .annual-chart-legend {
+    font-size: 10px;
+    gap: 12px;
+  }
+  .annual-panel-subtitle {
+    font-size: 10px;
+  }
+  .annual-chart-hint {
+    margin: 5px 18px 10px;
+    font-size: 10px;
+  }
+  .annual-readout {
+    padding: 12px 18px;
+    font-size: 11px;
+  }
+  .annual-extremes {
+    grid-template-columns: 1fr;
+    padding: 12px 18px;
+    gap: 8px;
+  }
+  .annual-category-panel .panel-heading {
+    flex-wrap: wrap;
+  }
+  .annual-ranking {
+    padding: 0 18px 13px;
+  }
+  .annual-category-note {
+    padding: 12px 18px;
+  }
+  .annual-data-note {
+    font-size: 10px;
+  }
+  .annual-table-panel summary {
+    padding: 16px 18px;
+  }
+}
+.svg-scroll:focus-visible,
+.table-scroll:focus-visible {
+  outline: 2px solid #81aaf7;
+  outline-offset: -3px;
+}

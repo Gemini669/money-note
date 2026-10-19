@@ -238,3 +238,246 @@ test("CSV 带 BOM、转义逗号双引号换行，并中和公式注入", () => 
   assert.ok(csv.includes('"\'+1+1"'));
   assert.ok(csv.includes('"12.34"'));
 });
+
+test("年度空账本保留12个月及全部分类，金额和占比均为零", () => {
+  const data = M.summarizeYear([], 2026);
+  assert.equal(data.count, 0);
+  for (const key of [
+    "income",
+    "expense",
+    "balance",
+    "averageIncome",
+    "averageExpense",
+    "incomeCount",
+    "expenseCount",
+  ])
+    assert.equal(data[key], 0);
+  assert.equal(data.months.length, 12);
+  assert.deepEqual(
+    data.months.map((m) => m.key),
+    Array.from(
+      { length: 12 },
+      (_, i) => `2026-${String(i + 1).padStart(2, "0")}`,
+    ),
+  );
+  assert.ok(
+    data.months.every(
+      (m) => m.income === 0 && m.expense === 0 && m.balance === 0,
+    ),
+  );
+  assert.equal(data.expenseCategories.length, 8);
+  assert.equal(data.incomeCategories.length, 4);
+  assert.ok(
+    [...data.expenseCategories, ...data.incomeCategories].every(
+      (c) => c.share === 0 && c.amountCents === 0,
+    ),
+  );
+});
+
+test("年度只收入：笔数和按全年12个月计算的月均值正确", () => {
+  const data = M.summarizeYear(
+    [
+      record({
+        type: "income",
+        category: "工资",
+        amountCents: 12000,
+        date: "2026-01-01",
+      }),
+    ],
+    "2026",
+  );
+  assert.equal(data.income, 12000);
+  assert.equal(data.balance, 12000);
+  assert.equal(data.incomeCount, 1);
+  assert.equal(data.expenseCount, 0);
+  assert.equal(data.averageIncome, 1000);
+  assert.equal(data.averageExpense, 0);
+  assert.equal(data.incomeCategories[0].share, 1);
+  assert.ok(data.expenseCategories.every((c) => c.share === 0));
+});
+
+test("年度只支出：负结余不会归零，最高月份包含无记录的零结余月", () => {
+  const data = M.summarizeYear(
+    [record({ amountCents: 1200, date: "2026-01-01" })],
+    2026,
+  );
+  assert.equal(data.balance, -1200);
+  assert.equal(data.months[0].balance, -1200);
+  assert.equal(data.expenseCount, 1);
+  assert.equal(data.averageExpense, 100);
+  assert.equal(data.highestBalance, 0);
+  assert.deepEqual(data.highestMonths, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  assert.deepEqual(data.lowestMonths, [1]);
+});
+
+test("年度筛选以交易日期为准，正确包含年初年末及闰日", () => {
+  const records = [
+    record({ id: "a", date: "2025-12-31" }),
+    record({ id: "b", date: "2026-01-01" }),
+    record({ id: "c", date: "2026-12-31" }),
+    record({ id: "d", date: "2027-01-01" }),
+    record({ id: "e", date: "2024-02-29" }),
+  ];
+  assert.deepEqual(
+    M.filterByYear(records, 2026).map((r) => r.id),
+    ["b", "c"],
+  );
+  assert.equal(M.summarizeYear(records, 2026).expense, 2468);
+  assert.equal(M.summarizeYear(records, 2024).months[1].expense, 1234);
+  assert.equal(M.summarizeYear(records, 2025).count, 1);
+});
+
+test("年度12个月部分有记录时补零，笔数、月均取整、极值正确", () => {
+  const records = [
+    record({
+      id: "a",
+      date: "2026-01-01",
+      type: "income",
+      category: "工资",
+      amountCents: 1200,
+    }),
+    record({ id: "b", date: "2026-01-31", amountCents: 200 }),
+    record({ id: "c", date: "2026-02-01", amountCents: 600 }),
+  ];
+  const data = M.summarizeYear(records, 2026);
+  assert.equal(data.income, 1200);
+  assert.equal(data.expense, 800);
+  assert.equal(data.balance, 400);
+  assert.equal(data.averageIncome, 100);
+  assert.equal(data.averageExpense, 67);
+  assert.deepEqual(data.highestMonths, [1]);
+  assert.deepEqual(data.lowestMonths, [2]);
+  assert.equal(data.highestBalance, 1000);
+  assert.equal(data.lowestBalance, -600);
+  assert.equal(data.months[0].incomeCount, 1);
+  assert.equal(data.months[0].expenseCount, 1);
+  assert.ok(
+    data.months
+      .slice(2)
+      .every((m) => m.income === 0 && m.expense === 0 && m.balance === 0),
+  );
+  assert.deepEqual(M.monthlySeries(records, 2026), data.months);
+});
+
+test("年度分类金额、笔数、比例、排行和合计正确，收入其他与支出其他独立", () => {
+  const records = [
+    record({ id: "a", category: "餐饮", amountCents: 100 }),
+    record({ id: "b", category: "交通", amountCents: 300 }),
+    record({ id: "c", category: "餐饮", amountCents: 100 }),
+    record({ id: "d", category: "其他", amountCents: 100 }),
+    record({ id: "e", type: "income", category: "工资", amountCents: 100 }),
+    record({ id: "f", type: "income", category: "其他", amountCents: 300 }),
+  ];
+  const data = M.summarizeYear(records, 2026);
+  assert.deepEqual(
+    data.expenseCategories.slice(0, 3).map((c) => c.category),
+    ["交通", "餐饮", "其他"],
+  );
+  assert.equal(data.expenseCategories[0].share, 0.5);
+  assert.equal(data.expenseCategories[1].count, 2);
+  assert.equal(data.incomeCategories[0].category, "其他");
+  assert.equal(data.incomeCategories[0].share, 0.75);
+  for (const [categories, total] of [
+    [data.expenseCategories, data.expense],
+    [data.incomeCategories, data.income],
+  ]) {
+    assert.equal(
+      categories.reduce((sum, c) => sum + c.amountCents, 0),
+      total,
+    );
+    assert.ok(
+      Math.abs(categories.reduce((sum, c) => sum + c.share, 0) - 1) < 1e-12,
+    );
+  }
+  assert.deepEqual(
+    M.summarizeYearCategories(records, 2026, "income"),
+    data.incomeCategories,
+  );
+});
+
+test("年度金额精度及月均按分四舍五入，保留小额交易", () => {
+  const data = M.summarizeYear(
+    [
+      record({ id: "a", amountCents: M.parseAmount("0.10") }),
+      record({ id: "b", amountCents: M.parseAmount("0.20") }),
+    ],
+    2026,
+  );
+  assert.equal(data.expense, 30);
+  assert.equal(data.balance, -30);
+  assert.equal(data.averageExpense, 3);
+  assert.equal(M.formatMoney(data.expense), "¥0.30");
+  assert.equal(
+    M.summarizeYear([record({ amountCents: 5 })], 2026).averageExpense,
+    0,
+  );
+  assert.equal(
+    M.summarizeYear([record({ amountCents: 6 })], 2026).averageExpense,
+    1,
+  );
+});
+
+test("年度大额边界与10000条汇总仍是安全整数，月均与BigInt参考值一致", () => {
+  const records = Array.from({ length: M.MAX_RECORDS }, (_, i) =>
+    record({ id: String(i), amountCents: M.MAX_AMOUNT_CENTS }),
+  );
+  const data = M.summarizeYear(records, 2026);
+  const total = BigInt(M.MAX_RECORDS) * BigInt(M.MAX_AMOUNT_CENTS);
+  assert.equal(data.expense, Number(total));
+  assert.ok(Number.isSafeInteger(data.expense));
+  assert.equal(data.balance, -Number(total));
+  assert.equal(data.averageExpense, Number((total + 6n) / 12n));
+  assert.equal(data.expenseCategories[0].amountCents, Number(total));
+});
+
+test("年度分析是纯读取，不改变冻结的原账目或V1备份", () => {
+  const records = Object.freeze([
+    Object.freeze(record()),
+    Object.freeze(record({ id: "b", date: "2025-01-01" })),
+  ]);
+  const before = M.makeBackup(records, "2026-10-19T02:00:00.000Z");
+  M.filterByYear(records, 2026);
+  M.monthlySeries(records, 2026);
+  M.summarizeYearCategories(records, 2026, "expense");
+  M.summarizeYear(records, 2026);
+  assert.equal(M.makeBackup(records, "2026-10-19T02:00:00.000Z"), before);
+});
+
+test("年度分析兼容固定V1 JSON，存储键和备份结构版本不变", () => {
+  const text =
+    '{"format":"moneynote","version":1,"exportedAt":"2026-10-19T02:00:00.000Z","transactions":[{"id":"v1","date":"2025-12-31","type":"income","amountCents":12345,"category":"奖金","note":"隔离的兼容性测试","createdAt":"2026-10-19T01:00:00.000Z","updatedAt":"2026-10-19T01:00:00.000Z"}]}';
+  const records = M.parseBackup(text);
+  assert.equal(M.STORAGE_KEY, "moneynote.data.v1");
+  assert.equal(M.summarizeYear(records, 2025).income, 12345);
+  assert.equal(M.summarizeYear(records, 2026).count, 0);
+  const exported = JSON.parse(M.makeBackup(records));
+  assert.equal(exported.format, "moneynote");
+  assert.equal(exported.version, 1);
+  assert.deepEqual(Object.keys(exported), [
+    "format",
+    "version",
+    "exportedAt",
+    "transactions",
+  ]);
+  assert.deepEqual(exported.transactions, JSON.parse(text).transactions);
+});
+
+test("年度年份和分类类型边界严格验证", () => {
+  for (const year of [
+    "",
+    null,
+    undefined,
+    1899,
+    10000,
+    2026.5,
+    "2e3",
+    "02026",
+    " 2026",
+    "NaN",
+    Infinity,
+  ])
+    assert.throws(() => M.summarizeYear([], year));
+  for (const year of [1900, 9999, "2026"])
+    assert.equal(M.monthlySeries([], year).length, 12);
+  assert.throws(() => M.summarizeYearCategories([], 2026, "transfer"));
+});

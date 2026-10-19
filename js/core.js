@@ -222,6 +222,99 @@
     return { income, expense, balance: income - expense, categories, count };
   }
 
+  // 年度分析仅以交易日期筛选；不会修改记录、备份或本地存储。
+  function yearKey(year) {
+    const key = String(year);
+    assert(
+      /^\d{4}$/.test(key) && Number(key) >= 1900 && Number(key) <= 9999,
+      "请选择 1900 年至 9999 年之间的年份。",
+    );
+    return key;
+  }
+
+  function filterByYear(records, year) {
+    const prefix = `${yearKey(year)}-`;
+    return records.filter((item) => item.date.startsWith(prefix));
+  }
+
+  function monthlySeries(records, year) {
+    const key = yearKey(year);
+    const months = Array.from({ length: 12 }, (_, index) => ({
+      month: index + 1,
+      key: `${key}-${String(index + 1).padStart(2, "0")}`,
+      income: 0,
+      expense: 0,
+      balance: 0,
+      incomeCount: 0,
+      expenseCount: 0,
+    }));
+    for (const item of filterByYear(records, key)) {
+      const month = months[Number(item.date.slice(5, 7)) - 1];
+      month[item.type] += item.amountCents;
+      month[`${item.type}Count`]++;
+    }
+    for (const month of months) month.balance = month.income - month.expense;
+    return months;
+  }
+
+  function summarizeYearCategories(records, year, type) {
+    assert(type === "expense" || type === "income", "分类统计类型无效。");
+    const categories = CATEGORIES[type].map((category) => ({
+      category,
+      amountCents: 0,
+      count: 0,
+      share: 0,
+    }));
+    let total = 0;
+    for (const item of filterByYear(records, year)) {
+      if (item.type !== type) continue;
+      const category = categories.find((row) => row.category === item.category);
+      category.amountCents += item.amountCents;
+      category.count++;
+      total += item.amountCents;
+    }
+    for (const category of categories)
+      category.share = total ? category.amountCents / total : 0;
+    // 金额相同时维持现有分类顺序，零值分类也保留在数据模型中。
+    return categories.sort((a, b) => b.amountCents - a.amountCents);
+  }
+
+  function summarizeYear(records, year) {
+    const key = yearKey(year);
+    const months = monthlySeries(records, key);
+    const totals = months.reduce(
+      (sum, month) => ({
+        income: sum.income + month.income,
+        expense: sum.expense + month.expense,
+        incomeCount: sum.incomeCount + month.incomeCount,
+        expenseCount: sum.expenseCount + month.expenseCount,
+      }),
+      { income: 0, expense: 0, incomeCount: 0, expenseCount: 0 },
+    );
+    const highestBalance = Math.max(...months.map((month) => month.balance));
+    const lowestBalance = Math.min(...months.map((month) => month.balance));
+    return {
+      year: Number(key),
+      ...totals,
+      balance: totals.income - totals.expense,
+      count: totals.incomeCount + totals.expenseCount,
+      // 全部汇总为整数分；均值按 12 个月四舍五入到分，包含零记录月份。
+      averageIncome: Math.floor((totals.income + 6) / 12),
+      averageExpense: Math.floor((totals.expense + 6) / 12),
+      months,
+      expenseCategories: summarizeYearCategories(records, key, "expense"),
+      incomeCategories: summarizeYearCategories(records, key, "income"),
+      highestBalance,
+      lowestBalance,
+      highestMonths: months
+        .filter((month) => month.balance === highestBalance)
+        .map((month) => month.month),
+      lowestMonths: months
+        .filter((month) => month.balance === lowestBalance)
+        .map((month) => month.month),
+    };
+  }
+
   function filterRecords(
     records,
     { month = "", category = "", keyword = "", type = "" } = {},
@@ -293,6 +386,10 @@
     parseBackup,
     makeBackup,
     summarize,
+    filterByYear,
+    monthlySeries,
+    summarizeYearCategories,
+    summarizeYear,
     filterRecords,
     formatMoney,
     toCSV,

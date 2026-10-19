@@ -15,7 +15,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"
     />
-    <title>小账本 MoneyNote · 把生活记清楚</title>
+    <title>小账本 MoneyNote V2.0 · 把生活记清楚</title>
     <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./css/style.css" />
     <script src="./js/core.js" defer></script>
@@ -39,13 +39,16 @@
       <a class="nav-item" href="#transactions"
         ><span aria-hidden="true">≡</span> 收支明细</a
       >
+      <a class="nav-item" href="#annual-report" title="年度报告"
+        ><span aria-hidden="true">▥</span> 年度报告</a
+      >
       <button class="nav-item" id="backup-help" type="button">
         <span aria-hidden="true">⇅</span> 数据与备份
       </button>
       <div class="sidebar-footer">
         <span class="privacy-dot"></span> 只属于你的账本
         <p>数据保存在本机浏览器<br />无需登录，安心记录</p>
-        <span class="version">MONEYNOTE · V1.0</span>
+        <span class="version">MONEYNOTE · V2.0</span>
       </div>
     </aside>
 
@@ -58,17 +61,6 @@
         >
       </header>
       <main id="overview">
-        <section class="page-heading">
-          <div>
-            <p class="eyebrow">A LITTLE NOTE, A CLEARER LIFE</p>
-            <h1>把生活，记清楚<span class="heading-dot">。</span></h1>
-            <p class="subtitle">每一笔小记录，都是认真生活的印记。</p>
-          </div>
-          <button class="button primary desktop-add" id="add-top" type="button">
-            <span aria-hidden="true">＋</span> 记一笔
-          </button>
-        </section>
-
         <div class="storage-warning" id="storage-warning" role="alert" hidden>
           <strong>账本暂时无法读取</strong>
           <p id="storage-message"></p>
@@ -81,158 +73,464 @@
           </div>
         </div>
 
-        <section class="month-bar" aria-label="月份选择">
-          <div class="month-controls">
+        <nav class="view-tabs" aria-label="手机页面导航">
+          <a href="#overview" aria-current="page">账本概览</a>
+          <a href="#annual-report">年度报告</a>
+        </nav>
+        <div id="monthly-view">
+          <section class="page-heading">
+            <div>
+              <p class="eyebrow">A LITTLE NOTE, A CLEARER LIFE</p>
+              <h1>把生活，记清楚<span class="heading-dot">。</span></h1>
+              <p class="subtitle">每一笔小记录，都是认真生活的印记。</p>
+            </div>
             <button
-              id="prev-month"
-              class="icon-button"
-              aria-label="上个月"
+              class="button primary desktop-add"
+              id="add-top"
               type="button"
             >
-              ‹</button
-            ><label class="sr-only" for="month">选择年月</label
-            ><input
-              id="month"
-              type="month"
-              min="1900-01"
-              max="9999-12"
-              required
-            /><button
-              id="next-month"
-              class="icon-button"
-              aria-label="下个月"
-              type="button"
-            >
-              ›</button
-            ><button id="this-month" class="text-button" type="button">
-              回到本月
+              <span aria-hidden="true">＋</span> 记一笔
             </button>
-          </div>
-          <span class="month-caption" id="month-caption"></span>
-        </section>
+          </section>
 
-        <section class="summary-grid" aria-label="所选月份收支统计">
-          <article class="summary-card">
-            <div class="summary-label">
-              <span>本月收入</span
-              ><span class="stat-icon income-icon" aria-hidden="true">↙</span>
-            </div>
-            <strong id="income-total">¥0.00</strong>
-            <p>每一份努力，都有回响</p>
-            <span class="card-accent income-accent"></span>
-          </article>
-          <article class="summary-card">
-            <div class="summary-label">
-              <span>本月支出</span
-              ><span class="stat-icon expense-icon" aria-hidden="true">↗</span>
-            </div>
-            <strong id="expense-total">¥0.00</strong>
-            <p>让每一笔花费，心中有数</p>
-            <span class="card-accent expense-accent"></span>
-          </article>
-          <article class="summary-card balance-card">
-            <div class="summary-label">
-              <span>本月结余</span
-              ><span class="stat-icon balance-icon" aria-hidden="true">≈</span>
-            </div>
-            <strong id="balance-total">¥0.00</strong>
-            <p>收入 − 支出 · 为未来留一点余地</p>
-            <span class="balance-decoration" aria-hidden="true"></span>
-          </article>
-        </section>
-
-        <div class="content-grid">
-          <section
-            class="panel analysis-panel"
-            aria-labelledby="analysis-title"
-          >
-            <div class="panel-heading">
-              <h2 id="analysis-title">钱花在哪儿</h2>
-              <span class="subtle">本月支出分析</span>
-            </div>
-            <div class="chart-area">
-              <div
-                class="donut empty-donut"
-                id="expense-chart"
-                role="img"
-                aria-label="本月暂无支出"
+          <section class="month-bar" aria-label="月份选择">
+            <div class="month-controls">
+              <button
+                id="prev-month"
+                class="icon-button"
+                aria-label="上个月"
+                type="button"
               >
-                <div class="donut-center">
-                  <span>总支出</span><strong id="chart-total">¥0.00</strong>
+                ‹</button
+              ><label class="sr-only" for="month">选择年月</label
+              ><input
+                id="month"
+                type="month"
+                min="1900-01"
+                max="9999-12"
+                required
+              /><button
+                id="next-month"
+                class="icon-button"
+                aria-label="下个月"
+                type="button"
+              >
+                ›</button
+              ><button id="this-month" class="text-button" type="button">
+                回到本月
+              </button>
+            </div>
+            <span class="month-caption" id="month-caption"></span>
+          </section>
+
+          <section class="summary-grid" aria-label="所选月份收支统计">
+            <article class="summary-card">
+              <div class="summary-label">
+                <span>本月收入</span
+                ><span class="stat-icon income-icon" aria-hidden="true">↙</span>
+              </div>
+              <strong id="income-total">¥0.00</strong>
+              <p>每一份努力，都有回响</p>
+              <span class="card-accent income-accent"></span>
+            </article>
+            <article class="summary-card">
+              <div class="summary-label">
+                <span>本月支出</span
+                ><span class="stat-icon expense-icon" aria-hidden="true"
+                  >↗</span
+                >
+              </div>
+              <strong id="expense-total">¥0.00</strong>
+              <p>让每一笔花费，心中有数</p>
+              <span class="card-accent expense-accent"></span>
+            </article>
+            <article class="summary-card balance-card">
+              <div class="summary-label">
+                <span>本月结余</span
+                ><span class="stat-icon balance-icon" aria-hidden="true"
+                  >≈</span
+                >
+              </div>
+              <strong id="balance-total">¥0.00</strong>
+              <p>收入 − 支出 · 为未来留一点余地</p>
+              <span class="balance-decoration" aria-hidden="true"></span>
+            </article>
+          </section>
+
+          <div class="content-grid">
+            <section
+              class="panel analysis-panel"
+              aria-labelledby="analysis-title"
+            >
+              <div class="panel-heading">
+                <h2 id="analysis-title">钱花在哪儿</h2>
+                <span class="subtle">本月支出分析</span>
+              </div>
+              <div class="chart-area">
+                <div
+                  class="donut empty-donut"
+                  id="expense-chart"
+                  role="img"
+                  aria-label="本月暂无支出"
+                >
+                  <div class="donut-center">
+                    <span>总支出</span><strong id="chart-total">¥0.00</strong>
+                  </div>
                 </div>
               </div>
-            </div>
-            <p id="chart-empty" class="chart-empty">
-              还没有支出记录<br /><span>记下第一笔，慢慢看见生活的轮廓</span>
-            </p>
-            <ul
-              class="category-legend"
-              id="category-legend"
-              aria-label="各类别支出金额和占比"
-            ></ul>
-            <div class="analysis-footnote">统计包含所选月份的全部账目</div>
-          </section>
-
-          <section
-            class="panel transactions-panel"
-            id="transactions"
-            aria-labelledby="transactions-title"
-          >
-            <div class="panel-heading">
-              <div class="title-with-count">
-                <h2 id="transactions-title">收支明细</h2>
-                <span class="count-badge" id="transaction-count">0 笔</span>
-              </div>
-              <button id="add-list" class="text-button" type="button">
-                ＋ 新增账目
-              </button>
-            </div>
-            <div class="filters">
-              <label class="search-box"
-                ><span aria-hidden="true">⌕</span
-                ><span class="sr-only">搜索备注、分类、日期或金额</span
-                ><input
-                  id="search"
-                  type="search"
-                  placeholder="搜索备注、分类或金额"
-                  maxlength="200" /></label
-              ><label
-                ><span class="sr-only">筛选分类</span
-                ><select id="category-filter">
-                  <option value="">全部分类</option>
-                </select></label
-              ><button
-                id="clear-filters"
-                class="text-button"
-                type="button"
-                hidden
-              >
-                清除筛选
-              </button>
-            </div>
-            <p class="filter-note" id="filter-note">按日期从近到远排列</p>
-            <div class="transaction-list" id="transaction-list"></div>
-            <div class="empty-state" id="list-empty">
-              <div class="empty-art" aria-hidden="true">▤<span>＋</span></div>
-              <h3 id="empty-title">新的账本，新的开始</h3>
-              <p id="empty-description">
-                从一杯咖啡、一份工资开始，记下你的第一笔。
+              <p id="chart-empty" class="chart-empty">
+                还没有支出记录<br /><span>记下第一笔，慢慢看见生活的轮廓</span>
               </p>
-              <button class="button primary" id="add-empty" type="button">
-                ＋ 记下第一笔
-              </button>
-            </div>
-            <div class="pagination" id="pagination" hidden>
-              <button class="button small" id="prev-page" type="button">
-                上一页</button
-              ><span id="page-label"></span
-              ><button class="button small" id="next-page" type="button">
-                下一页
-              </button>
-            </div>
-          </section>
-        </div>
+              <ul
+                class="category-legend"
+                id="category-legend"
+                aria-label="各类别支出金额和占比"
+              ></ul>
+              <div class="analysis-footnote">统计包含所选月份的全部账目</div>
+            </section>
 
+            <section
+              class="panel transactions-panel"
+              id="transactions"
+              aria-labelledby="transactions-title"
+            >
+              <div class="panel-heading">
+                <div class="title-with-count">
+                  <h2 id="transactions-title">收支明细</h2>
+                  <span class="count-badge" id="transaction-count">0 笔</span>
+                </div>
+                <button id="add-list" class="text-button" type="button">
+                  ＋ 新增账目
+                </button>
+              </div>
+              <div class="filters">
+                <label class="search-box"
+                  ><span aria-hidden="true">⌕</span
+                  ><span class="sr-only">搜索备注、分类、日期或金额</span
+                  ><input
+                    id="search"
+                    type="search"
+                    placeholder="搜索备注、分类或金额"
+                    maxlength="200" /></label
+                ><label
+                  ><span class="sr-only">筛选分类</span
+                  ><select id="category-filter">
+                    <option value="">全部分类</option>
+                  </select></label
+                ><button
+                  id="clear-filters"
+                  class="text-button"
+                  type="button"
+                  hidden
+                >
+                  清除筛选
+                </button>
+              </div>
+              <p class="filter-note" id="filter-note">按日期从近到远排列</p>
+              <div class="transaction-list" id="transaction-list"></div>
+              <div class="empty-state" id="list-empty">
+                <div class="empty-art" aria-hidden="true">▤<span>＋</span></div>
+                <h3 id="empty-title">新的账本，新的开始</h3>
+                <p id="empty-description">
+                  从一杯咖啡、一份工资开始，记下你的第一笔。
+                </p>
+                <button class="button primary" id="add-empty" type="button">
+                  ＋ 记下第一笔
+                </button>
+              </div>
+              <div class="pagination" id="pagination" hidden>
+                <button class="button small" id="prev-page" type="button">
+                  上一页</button
+                ><span id="page-label"></span
+                ><button class="button small" id="next-page" type="button">
+                  下一页
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+        <section id="annual-report" aria-labelledby="annual-title" hidden>
+          <div class="page-heading annual-heading">
+            <div>
+              <p class="eyebrow">YOUR YEAR, AT A GLANCE</p>
+              <h1 id="annual-title" tabindex="-1">
+                年度报告<span class="heading-dot">。</span>
+              </h1>
+              <p class="subtitle">从十二个月的记录，看见这一年的收获与选择。</p>
+            </div>
+            <span class="report-badge">MoneyNote V2.0</span>
+          </div>
+          <div class="year-toolbar">
+            <div class="year-controls">
+              <button
+                id="prev-year"
+                class="icon-button"
+                type="button"
+                aria-label="上一年"
+              >
+                ‹</button
+              ><label for="annual-year">选择年份</label
+              ><input
+                id="annual-year"
+                type="number"
+                min="1900"
+                max="9999"
+                step="1"
+                inputmode="numeric"
+                required
+              /><span>年</span
+              ><button
+                id="next-year"
+                class="icon-button"
+                type="button"
+                aria-label="下一年"
+              >
+                ›</button
+              ><button id="this-year" class="text-button" type="button">
+                回到今年
+              </button>
+            </div>
+            <p id="annual-range" class="subtle"></p>
+          </div>
+          <p
+            id="annual-unavailable"
+            class="storage-warning"
+            role="status"
+            hidden
+          >
+            账目暂时无法读取，无法生成年度报告。请按上方提示恢复数据。
+          </p>
+          <div id="annual-report-content">
+            <p class="annual-empty" id="annual-empty" role="status" hidden>
+              这一年还没有记录。可以切换年份，或回到账本记下第一笔。以下图表中的零值代表没有记录。
+            </p>
+            <section
+              class="summary-grid annual-summary"
+              aria-label="全年收支统计"
+            >
+              <article class="summary-card">
+                <div class="summary-label">
+                  <span>全年收入</span
+                  ><span class="stat-icon income-icon" aria-hidden="true"
+                    >↙</span
+                  >
+                </div>
+                <strong id="annual-income">¥0.00</strong>
+                <p>
+                  <span id="annual-income-count">0</span> 笔收入 ·
+                  每一份努力都有回响
+                </p>
+                <span class="card-accent income-accent"></span>
+              </article>
+              <article class="summary-card">
+                <div class="summary-label">
+                  <span>全年支出</span
+                  ><span class="stat-icon expense-icon" aria-hidden="true"
+                    >↗</span
+                  >
+                </div>
+                <strong id="annual-expense">¥0.00</strong>
+                <p>
+                  <span id="annual-expense-count">0</span> 笔支出 ·
+                  每一笔花费心中有数
+                </p>
+                <span class="card-accent expense-accent"></span>
+              </article>
+              <article class="summary-card balance-card">
+                <div class="summary-label">
+                  <span>全年结余</span
+                  ><span class="stat-icon balance-icon" aria-hidden="true"
+                    >≈</span
+                  >
+                </div>
+                <strong id="annual-balance">¥0.00</strong>
+                <p>全年收入 − 全年支出</p>
+                <span class="balance-decoration" aria-hidden="true"></span>
+              </article>
+            </section>
+            <section class="annual-averages" aria-label="全年月均收支">
+              <div>
+                <span>月均收入</span
+                ><strong id="annual-average-income">¥0.00</strong>
+              </div>
+              <div>
+                <span>月均支出</span
+                ><strong id="annual-average-expense">¥0.00</strong>
+              </div>
+              <p>全年总额 ÷ 12 个月<br />包含无记录月份，四舍五入到分</p>
+            </section>
+            <section
+              class="panel annual-trend-panel"
+              aria-labelledby="annual-flow-title"
+            >
+              <div class="panel-heading">
+                <div>
+                  <h2 id="annual-flow-title">十二个月的收支足迹</h2>
+                  <p class="annual-panel-subtitle">
+                    每月收入与支出 · 单位：人民币元
+                  </p>
+                </div>
+                <div class="annual-chart-legend">
+                  <span><i class="flow-income"></i>收入</span
+                  ><span><i class="flow-expense"></i>支出</span>
+                </div>
+              </div>
+              <p class="annual-chart-hint">
+                点选柱形或使用键盘查看金额；窄屏可横向滑动图表。
+              </p>
+              <figure class="annual-figure">
+                <div
+                  class="svg-scroll"
+                  role="region"
+                  aria-label="十二个月收支图，窄屏可横向滚动"
+                  tabindex="0"
+                >
+                  <svg
+                    id="annual-flow-chart"
+                    class="annual-svg"
+                    viewBox="0 0 800 290"
+                    role="group"
+                    aria-roledescription="交互图表"
+                    aria-labelledby="annual-flow-svg-title annual-flow-svg-desc"
+                  ></svg>
+                </div>
+                <figcaption
+                  id="annual-flow-readout"
+                  class="annual-readout"
+                  aria-live="polite"
+                ></figcaption>
+              </figure>
+            </section>
+            <section
+              class="panel annual-trend-panel"
+              aria-labelledby="annual-balance-title"
+            >
+              <div class="panel-heading">
+                <div>
+                  <h2 id="annual-balance-title">每个月，留住多少</h2>
+                  <p class="annual-panel-subtitle">
+                    月度结余趋势 · 收入减支出，保留负值
+                  </p>
+                </div>
+                <div class="annual-chart-legend">
+                  <span><i class="flow-expense"></i>非负结余</span
+                  ><span><i class="flow-negative"></i>负结余</span>
+                </div>
+              </div>
+              <figure class="annual-figure">
+                <div
+                  class="svg-scroll"
+                  role="region"
+                  aria-label="月度结余图，含零值参考线，窄屏可横向滚动"
+                  tabindex="0"
+                >
+                  <svg
+                    id="annual-balance-chart"
+                    class="annual-svg"
+                    viewBox="0 0 800 290"
+                    role="group"
+                    aria-roledescription="交互图表"
+                    aria-labelledby="annual-balance-svg-title annual-balance-svg-desc"
+                  ></svg>
+                </div>
+                <figcaption
+                  id="annual-balance-readout"
+                  class="annual-readout"
+                  aria-live="polite"
+                ></figcaption>
+              </figure>
+              <div class="annual-extremes">
+                <p id="annual-highest"></p>
+                <p id="annual-lowest"></p>
+              </div>
+            </section>
+            <section
+              class="panel annual-table-panel"
+              aria-label="每月精确收支数据"
+            >
+              <details id="annual-table-details">
+                <summary>查看 12 个月的精确金额与笔数</summary>
+                <div
+                  class="table-scroll"
+                  role="region"
+                  aria-label="每月金额与笔数表，窄屏可横向滚动"
+                  tabindex="0"
+                >
+                  <table id="annual-month-table">
+                    <caption id="annual-table-caption"></caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">月份</th>
+                        <th scope="col">收入</th>
+                        <th scope="col">支出</th>
+                        <th scope="col">结余</th>
+                        <th scope="col">收入笔数</th>
+                        <th scope="col">支出笔数</th>
+                      </tr>
+                    </thead>
+                    <tbody></tbody>
+                    <tfoot>
+                      <tr>
+                        <th scope="row">全年合计</th>
+                        <td id="annual-table-income"></td>
+                        <td id="annual-table-expense"></td>
+                        <td id="annual-table-balance"></td>
+                        <td id="annual-table-income-count"></td>
+                        <td id="annual-table-expense-count"></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </details>
+            </section>
+            <div class="annual-category-grid">
+              <section
+                class="panel annual-category-panel"
+                aria-labelledby="annual-expense-title"
+              >
+                <div class="panel-heading">
+                  <h2 id="annual-expense-title">年度支出分类排行</h2>
+                  <span class="subtle">占全年支出比例</span>
+                </div>
+                <p id="annual-expense-empty" class="annual-category-empty">
+                  这一年还没有支出记录。
+                </p>
+                <ol
+                  id="annual-expense-ranking"
+                  class="annual-ranking"
+                  aria-label="年度支出分类、金额与占比"
+                ></ol>
+                <p class="annual-category-note">
+                  按金额从高到低排列；零支出分类不显示。
+                </p>
+              </section>
+              <section
+                class="panel annual-category-panel"
+                aria-labelledby="annual-income-title"
+              >
+                <div class="panel-heading">
+                  <h2 id="annual-income-title">年度收入来源</h2>
+                  <span class="subtle">占全年收入比例</span>
+                </div>
+                <p id="annual-income-empty" class="annual-category-empty">
+                  这一年还没有收入记录。
+                </p>
+                <ol
+                  id="annual-income-ranking"
+                  class="annual-ranking"
+                  aria-label="年度收入来源、金额与占比"
+                ></ol>
+                <p class="annual-category-note">
+                  按金额从高到低排列；零收入分类不显示。
+                </p>
+              </section>
+            </div>
+            <p class="annual-data-note">
+              统计以账目交易日期为准，覆盖所选年份 1 月 1 日至 12 月 31
+              日。报表仅在浏览器中计算，不修改原有账目。
+            </p>
+          </div>
+        </section>
         <section
           class="backup-panel"
           id="data-tools"
@@ -266,13 +564,18 @@
           </p>
         </section>
         <footer class="page-footer">
-          <span>小账本 MoneyNote</span><span>好好生活，慢慢积累。</span>
+          <span>小账本 MoneyNote V2.0</span><span>好好生活，慢慢积累。</span>
         </footer>
       </main>
     </div>
     <div class="mobile-action-bar">
-      <span>生活有数，心里有底</span
-      ><button class="button primary" id="add-mobile" type="button">
+      <a
+        class="mobile-report-link"
+        id="mobile-report-link"
+        href="#annual-report"
+        >年度报告 ↗</a
+      >
+      <button class="button primary" id="add-mobile" type="button">
         ＋ 记一笔
       </button>
     </div>

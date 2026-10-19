@@ -78,13 +78,11 @@ async function importJSON(page, text, confirm = true) {
     await (confirm ? dialog.accept() : dialog.dismiss());
   };
   page.once("dialog", handler);
-  await page
-    .locator("#import-file")
-    .setInputFiles({
-      name: "backup.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(text),
-    });
+  await page.locator("#import-file").setInputFiles({
+    name: "backup.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(text),
+  });
   await page.waitForFunction(
     () => !document.getElementById("import-json").disabled,
   );
@@ -152,7 +150,7 @@ test("项目子路径加载、空态、无第三方请求和脚本错误", async
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("request", (request) => requests.push(request.url()));
   await page.goto(base);
-  assert.equal(await page.title(), "小账本 MoneyNote · 把生活记清楚");
+  assert.equal(await page.title(), "小账本 MoneyNote V2.0 · 把生活记清楚");
   assert.ok(await page.locator("#list-empty").isVisible());
   assert.equal(await amountText(page, "income-total"), "¥0.00");
   assert.equal(await page.locator(".transaction-row").count(), 0);
@@ -358,7 +356,10 @@ test("浏览器禁用存储时给出明确保护提示", async () => {
   assert.ok(await page.locator("#storage-warning").isVisible());
   assert.ok(await page.locator("#add-top").isDisabled());
   assert.ok(await page.locator("#export-json").isDisabled());
-  assert.match(await page.locator("#storage-message").textContent(), /不会自动覆盖/);
+  assert.match(
+    await page.locator("#storage-message").textContent(),
+    /不会自动覆盖/,
+  );
   await context.close();
 });
 
@@ -369,7 +370,9 @@ test("超大文件在读取前拒绝，键盘 Esc 取消新增不写入", async 
     mimeType: "application/json",
     buffer: Buffer.alloc(M.MAX_FILE_BYTES + 1, 32),
   });
-  await page.waitForFunction(() => !document.getElementById("import-json").disabled);
+  await page.waitForFunction(
+    () => !document.getElementById("import-json").disabled,
+  );
   assert.match(await page.locator("#toast").textContent(), /10 MB/);
   await page.locator("#add-top").click();
   assert.equal(await page.evaluate(() => document.activeElement.id), "amount");
@@ -456,4 +459,441 @@ test("手机宽度 320/390/768，单手新增和编辑弹窗无横向溢出", as
     await page.locator("#cancel-entry").click();
     await context.close();
   }
+});
+
+const annualEntries = [
+  entry({
+    id: "salary",
+    date: "2026-01-01",
+    type: "income",
+    category: "工资",
+    amountCents: 120000,
+  }),
+  entry({ id: "food", date: "2026-01-31", amountCents: 30000 }),
+  entry({
+    id: "travel",
+    date: "2026-02-01",
+    category: "交通",
+    amountCents: 60000,
+  }),
+  entry({
+    id: "bonus",
+    date: "2026-12-31",
+    type: "income",
+    category: "奖金",
+    amountCents: 60000,
+  }),
+  entry({ id: "previous", date: "2025-12-31", amountCents: 9900 }),
+];
+async function visitAnnual(page, year = 2026) {
+  await page.evaluate(() => {
+    location.hash = "#annual-report";
+  });
+  await page.locator("#annual-title").waitFor({ state: "visible" });
+  await page.locator("#annual-year").fill(String(year));
+  await page.locator("#annual-year").dispatchEvent("change");
+}
+async function visitMonthly(page) {
+  await page.evaluate(() => {
+    location.hash = "#overview";
+  });
+  await page.locator("#monthly-view").waitFor({ state: "visible" });
+}
+
+test("年度桌面导航、默认年份与V1数据只读兼容，保留月度筛选状态", async () => {
+  const raw = M.makeBackup(annualEntries);
+  const { context, page } = await openPage(
+    { viewport: { width: 1440, height: 1000 } },
+    raw,
+  );
+  await page.locator("#search").fill("午餐");
+  await page.locator('.sidebar a[href="#annual-report"]').click();
+  assert.ok(await page.locator("#annual-report").isVisible());
+  assert.ok(await page.locator("#monthly-view").isHidden());
+  assert.equal(
+    await page.locator("#annual-year").inputValue(),
+    await page.evaluate(() => String(new Date().getFullYear())),
+  );
+  await page.locator("#annual-year").fill("2025");
+  await page.locator("#annual-year").dispatchEvent("change");
+  assert.equal(await amountText(page, "annual-expense"), "¥99.00");
+  await page.locator('.sidebar a[href="#overview"]').click();
+  assert.equal(await page.locator("#month").inputValue(), "2026-10");
+  assert.equal(await page.locator("#search").inputValue(), "午餐");
+  assert.equal(
+    await page.evaluate((key) => localStorage.getItem(key), M.STORAGE_KEY),
+    raw,
+  );
+  assert.equal(await page.evaluate(() => localStorage.length), 1);
+  await context.close();
+});
+
+test("年度汇总、12个月图表、负结余、极值、分类排行及精确辅助表格", async () => {
+  const { context, page } = await openPage({}, M.makeBackup(annualEntries));
+  await visitAnnual(page);
+  assert.equal(await amountText(page, "annual-income"), "¥1,800.00");
+  assert.equal(await amountText(page, "annual-expense"), "¥900.00");
+  assert.equal(await amountText(page, "annual-balance"), "¥900.00");
+  assert.equal(await amountText(page, "annual-income-count"), "2");
+  assert.equal(await amountText(page, "annual-expense-count"), "2");
+  assert.equal(await amountText(page, "annual-average-income"), "¥150.00");
+  assert.equal(await amountText(page, "annual-average-expense"), "¥75.00");
+  assert.equal(
+    await page.locator('#annual-flow-chart rect[data-series="income"]').count(),
+    12,
+  );
+  assert.equal(
+    await page
+      .locator('#annual-flow-chart rect[data-series="expense"]')
+      .count(),
+    12,
+  );
+  assert.equal(
+    await page
+      .locator("#annual-balance-chart circle[data-balance-cents]")
+      .count(),
+    12,
+  );
+  const negative = Number(
+    await page
+      .locator('#annual-balance-chart circle[data-balance-cents="-60000"]')
+      .getAttribute("cy"),
+  );
+  const zero = Number(
+    await page
+      .locator("#annual-balance-chart .chart-zero-line")
+      .getAttribute("y1"),
+  );
+  assert.ok(negative > zero, "负结余节点必须位于零线下方");
+  assert.match(await amountText(page, "annual-highest"), /1月.*¥900.00/);
+  assert.match(await amountText(page, "annual-lowest"), /2月.*-¥600.00/);
+  assert.equal(
+    await page
+      .locator("#annual-expense-ranking li")
+      .first()
+      .getAttribute("data-category"),
+    "交通",
+  );
+  assert.match(
+    await page.locator("#annual-expense-ranking li").first().textContent(),
+    /66.7%/,
+  );
+  assert.equal(
+    await page
+      .locator("#annual-income-ranking li")
+      .first()
+      .getAttribute("data-category"),
+    "工资",
+  );
+  await page.locator("#annual-table-details summary").click();
+  assert.equal(await page.locator("#annual-month-table tbody tr").count(), 12);
+  assert.equal(
+    await page
+      .locator("#annual-month-table tbody tr")
+      .nth(1)
+      .locator("td")
+      .nth(2)
+      .textContent(),
+    "-¥600.00",
+  );
+  assert.equal(
+    await page
+      .locator("#annual-month-table tbody tr")
+      .nth(2)
+      .locator("td")
+      .first()
+      .textContent(),
+    "¥0.00",
+  );
+  assert.equal(await amountText(page, "annual-table-income"), "¥1,800.00");
+  assert.match(
+    await page.locator("#annual-month-table caption").textContent(),
+    /2026年/,
+  );
+  await context.close();
+});
+
+test("年度图表点选及键盘聚焦提供准确金额，SVG有无障碍标题与说明", async () => {
+  const { context, page } = await openPage({}, M.makeBackup(annualEntries));
+  await visitAnnual(page);
+  await page.locator('#annual-flow-chart .chart-month[data-month="2"]').click();
+  assert.match(
+    await amountText(page, "annual-flow-readout"),
+    /2026年2月.*收入 ¥0.00.*支出 ¥600.00/,
+  );
+  await page
+    .locator('#annual-balance-chart .chart-month[data-month="2"]')
+    .focus();
+  await page.keyboard.press("Enter");
+  assert.match(
+    await amountText(page, "annual-balance-readout"),
+    /2月.*-¥600.00/,
+  );
+  for (const id of ["annual-flow-chart", "annual-balance-chart"]) {
+    assert.equal(await page.locator(`#${id} title`).first().count(), 1);
+    assert.ok((await page.locator(`#${id} desc`).textContent()).length > 20);
+    assert.equal(
+      await page.locator(`#${id} .chart-month[tabindex="0"]`).count(),
+      12,
+    );
+    assert.ok(await page.locator(`#${id}`).getAttribute("aria-labelledby"));
+  }
+  await context.close();
+});
+
+test("年度空态、只有收入与只有支出，无收入占比不会显示NaN", async () => {
+  for (const seed of [
+    [],
+    [entry({ type: "income", category: "工资", amountCents: 1200 })],
+    [entry({ amountCents: 1200 })],
+  ]) {
+    const { context, page } = await openPage({}, M.makeBackup(seed));
+    await visitAnnual(page);
+    assert.equal(
+      await page.locator("#annual-empty").isVisible(),
+      seed.length === 0,
+    );
+    assert.equal(
+      await page.locator("#annual-income-empty").isVisible(),
+      !seed.some((r) => r.type === "income"),
+    );
+    assert.equal(
+      await page.locator("#annual-expense-empty").isVisible(),
+      !seed.some((r) => r.type === "expense"),
+    );
+    assert.ok(
+      !(await page.locator("#annual-report").textContent()).includes("NaN"),
+    );
+    if (seed[0]?.type === "expense")
+      assert.equal(await amountText(page, "annual-balance"), "-¥12.00");
+    if (!seed.length) {
+      const amounts = await page
+        .locator("#annual-flow-chart rect[data-amount-cents]")
+        .evaluateAll((nodes) =>
+          nodes.map((node) => Number(node.dataset.amountCents)),
+        );
+      assert.ok(amounts.every((amount) => amount === 0));
+      assert.match(await amountText(page, "annual-highest"), /暂无收支记录/);
+    }
+    await context.close();
+  }
+});
+
+test("年份上下切换、有效边界、错误年份回退及月度页面保持可用", async () => {
+  const { context, page } = await openPage({}, M.makeBackup(annualEntries));
+  await visitAnnual(page);
+  await page.locator("#prev-year").click();
+  assert.equal(await page.locator("#annual-year").inputValue(), "2025");
+  assert.equal(await amountText(page, "annual-expense"), "¥99.00");
+  await page.locator("#next-year").click();
+  assert.equal(await amountText(page, "annual-expense"), "¥900.00");
+  for (const bad of ["1899", "10000", "2026.5", ""]) {
+    await page.locator("#annual-year").fill(bad);
+    await page.locator("#annual-year").dispatchEvent("change");
+    assert.equal(await page.locator("#annual-year").inputValue(), "2026");
+    assert.match(await page.locator("#toast").textContent(), /1900/);
+  }
+  for (const year of ["1900", "9999"]) {
+    await page.locator("#annual-year").fill(year);
+    await page.locator("#annual-year").dispatchEvent("change");
+    assert.ok(
+      await page
+        .locator(year === "1900" ? "#prev-year" : "#next-year")
+        .isDisabled(),
+    );
+  }
+  await page.locator("#this-year").click();
+  assert.equal(
+    await page.locator("#annual-year").inputValue(),
+    await page.evaluate(() => String(new Date().getFullYear())),
+  );
+  await visitMonthly(page);
+  await add(page, { amount: "1" });
+  assert.equal((await values(page)).length, 6);
+  await context.close();
+});
+
+test("新增、编辑类型分类及跨年日期、删除后年度报表和图表即时更新", async () => {
+  const { context, page } = await openPage();
+  await add(page, { amount: "0.10", note: "年度联动测试" });
+  await visitAnnual(page);
+  assert.equal(await amountText(page, "annual-expense"), "¥0.10");
+  assert.equal(
+    await page
+      .locator(
+        '#annual-flow-chart .chart-month[data-month="10"] rect[data-series="expense"]',
+      )
+      .getAttribute("data-amount-cents"),
+    "10",
+  );
+  await visitMonthly(page);
+  await page.getByRole("button", { name: /^编辑 / }).click();
+  await page.locator('input[name="type"][value="income"]').check();
+  await page.locator("#category").selectOption("投资");
+  await page.locator("#amount").fill("2.20");
+  await page.locator("#date").fill("2025-03-01");
+  await page.locator("#save-entry").click();
+  await visitAnnual(page);
+  assert.equal(await amountText(page, "annual-expense"), "¥0.00");
+  await visitAnnual(page, 2025);
+  assert.equal(await amountText(page, "annual-income"), "¥2.20");
+  assert.equal(
+    await page
+      .locator("#annual-income-ranking li")
+      .first()
+      .getAttribute("data-category"),
+    "投资",
+  );
+  assert.equal(
+    await page
+      .locator(
+        '#annual-flow-chart .chart-month[data-month="3"] rect[data-series="income"]',
+      )
+      .getAttribute("data-amount-cents"),
+    "220",
+  );
+  await visitMonthly(page);
+  await page.locator("#month").fill("2025-03");
+  await page.locator("#month").dispatchEvent("change");
+  page.once("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: /^删除 / }).click();
+  await visitAnnual(page, 2025);
+  assert.equal(await amountText(page, "annual-income"), "¥0.00");
+  assert.ok(await page.locator("#annual-empty").isVisible());
+  assert.equal(await page.locator("#annual-income-ranking li").count(), 0);
+  await context.close();
+});
+
+test("V1备份导入后年度统计正确，年度导出仍保留原V1结构", async () => {
+  const { context, page } = await openPage();
+  await visitAnnual(page);
+  const raw = M.makeBackup(annualEntries);
+  const confirmation = await importJSON(page, raw);
+  assert.match(confirmation, /5 笔/);
+  assert.equal(await amountText(page, "annual-expense"), "¥900.00");
+  assert.equal(await amountText(page, "annual-income"), "¥1,800.00");
+  const promise = page.waitForEvent("download");
+  await page.locator("#export-json").click();
+  const exported = JSON.parse(
+    await fs.readFile(await (await promise).path(), "utf8"),
+  );
+  assert.equal(exported.format, "moneynote");
+  assert.equal(exported.version, 1);
+  assert.deepEqual(exported.transactions, annualEntries);
+  const saved = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    M.STORAGE_KEY,
+  );
+  await visitAnnual(page, 2025);
+  await visitAnnual(page, 2026);
+  assert.equal(
+    await page.evaluate((key) => localStorage.getItem(key), M.STORAGE_KEY),
+    saved,
+  );
+  await context.close();
+});
+
+test("年度报告接收多标签页同步，损坏存储不展示假零值，恢复后重新分析", async () => {
+  const { context, page } = await openPage({}, M.makeBackup([entry()]));
+  await visitAnnual(page);
+  const second = await context.newPage();
+  await second.goto(base);
+  await second.evaluate(({ key, text }) => localStorage.setItem(key, text), {
+    key: M.STORAGE_KEY,
+    text: M.makeBackup(annualEntries),
+  });
+  await page.waitForFunction(
+    () => document.getElementById("annual-income").textContent === "¥1,800.00",
+  );
+  assert.equal(await amountText(page, "annual-expense"), "¥900.00");
+  await second.evaluate(
+    (key) => localStorage.setItem(key, "{broken"),
+    M.STORAGE_KEY,
+  );
+  await page.locator("#annual-unavailable").waitFor({ state: "visible" });
+  assert.ok(await page.locator("#annual-report-content").isHidden());
+  assert.ok(await page.locator("#storage-warning").isVisible());
+  await importJSON(page, M.makeBackup(annualEntries));
+  assert.ok(await page.locator("#annual-unavailable").isHidden());
+  assert.equal(await amountText(page, "annual-income"), "¥1,800.00");
+  await context.close();
+});
+
+test("年度320/390/768及1440像素布局、最大金额、手机导航和横向图表浏览", async () => {
+  const seed = [
+    entry({ amountCents: M.MAX_AMOUNT_CENTS }),
+    entry({
+      id: "big-income",
+      type: "income",
+      category: "工资",
+      amountCents: M.MAX_AMOUNT_CENTS,
+      date: "2026-01-01",
+    }),
+  ];
+  for (const width of [320, 390, 768, 1440]) {
+    const { context, page } = await openPage(
+      {
+        viewport: { width, height: 900 },
+        hasTouch: width < 1000,
+        isMobile: width < 700,
+      },
+      M.makeBackup(seed),
+    );
+    if (width < 700)
+      await page.locator('.view-tabs a[href="#annual-report"]').click();
+    else await page.locator('.sidebar a[href="#annual-report"]').click();
+    await page.locator("#annual-year").fill("2026");
+    await page.locator("#annual-year").dispatchEvent("change");
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+      false,
+      `${width}px年度页面溢出`,
+    );
+    await page.locator("#annual-table-details summary").click();
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+      false,
+      `${width}px数据表溢出`,
+    );
+    const scroller = page.locator(".svg-scroll").first();
+    if (width < 700) {
+      assert.ok(
+        await scroller.evaluate((node) => node.scrollWidth > node.clientWidth),
+      );
+      await scroller.evaluate((node) => {
+        node.scrollLeft = 150;
+      });
+      assert.ok(await scroller.evaluate((node) => node.scrollLeft > 0));
+      await page.locator("#mobile-report-link").click();
+      assert.ok(await page.locator("#monthly-view").isVisible());
+    }
+    await context.close();
+  }
+});
+
+test("年度深链接与刷新不写入localStorage，不发出第三方请求或脚本错误", async () => {
+  const raw = M.makeBackup(annualEntries);
+  const { context, page } = await openPage({}, raw);
+  const errors = [],
+    requests = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("request", (r) => requests.push(r.url()));
+  await page.goto(base + "#annual-report");
+  assert.ok(await page.locator("#annual-report").isVisible());
+  await page.locator("#annual-year").fill("2025");
+  await page.locator("#annual-year").dispatchEvent("change");
+  await page.locator("#annual-flow-chart .chart-month").first().focus();
+  await page.reload();
+  assert.ok(await page.locator("#annual-report").isVisible());
+  assert.equal(
+    await page.evaluate((key) => localStorage.getItem(key), M.STORAGE_KEY),
+    raw,
+  );
+  assert.deepEqual(errors, []);
+  assert.ok(requests.every((url) => url.startsWith(base)));
+  await context.close();
 });
